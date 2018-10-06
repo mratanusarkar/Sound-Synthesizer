@@ -1,76 +1,85 @@
 %% Description
 % Author: Atanu Sarkar
 % Starting date: 10/08/2018 08:21 PM
-% v1.0
-% Implementing 'play command' feature of Wolfram Mathematica in MATLAB
+% 
+% v1.0 (10/08/2018)
+% Implementing 'play command' of Wolfram Mathematica in MATLAB.
+% creating signal defined by mathematical equation and playing it using 
+% sound function (which works using audioplayer function).
+% also, plotting signal's time domain waveform as well as 
+% frequency domain waveform of the signal using fourier transform (FFT).
+% Wolfram Mathematica has all these features inbuilt in it's 'play' command.
+%
+% v1.1 (06/10/2018)
+% Added stereo playback as well as sterio visualization features.
+% corrected the frequency domain analysis using 'frequency-time' spectrum 
+% analysis instead of FFT (which is exactly what Mathematica does!)
+% Added feature of exporting created signal as music file.
+% corrected bug related to:
+% 1. creating signals using mathematical summation function.
+% 2. sound distortion by introducing normalization for signal values
+%    not in -1 to +1 range.
 
 %% configure signal settings
- duration = 6;                          % duration in seconds
+ duration = 3;                          % duration in seconds
  amplitude = 1;                         % amplitude
- f = 420;                               % frequency in Hertz
+ f = 440;                               % frequency in Hertz
  phi = 2*pi*0;                          % phase offset, e.g.: 2*pi*0.25 = 1/4 cycle
  %% configure output settings
- fs = 32000;                            % sampling rate
+ fs = 48000;                            % sampling rate
  T = 1/fs;                              % sampling period
  t = 0:T:duration-T;                    % time vector
+ Left=zeros(1,length(t));               % Initialize Left Audio channel with zeros
+ Right=zeros(1,length(t));              % Initialize Right Audio channel with zeros
+ signal=zeros(2,length(t));             % initialize Sterio 2-Channel Audio signal with zeros
  %% create the signal
  omega = 2*pi*f;                        % angular frequency in radians
  
-%Few Waveforms:
-  %signal=amplitude*sin(omega*t + phi);
-  %signal=amplitude*cos(omega*t + phi);
-  %signal=amplitude*tan(omega*t + phi);
-  %signal=amplitude*square(omega*t + phi);
-  %triangle??
-  %signal=amplitude*sawtooth(omega*t + phi);
-  %signal=amplitude*diric(omega*t + phi,3);
-  
-  %signal=amplitude*pulstran(t,0:1/800:800,'tripuls');
-  
-%Few Functions related to waves and functions
-  %gauspuls(t,fc,bw)
-  %pulstran(t,d,'func')
-  
- %signal=(cos(t).*exp(t)).*sin(omega*t.*t + phi);
- %signal=amplitude*sin(omega*sin(10*t.*t) + phi);
- %signal=amplitude*sin(omega*t + phi)+amplitude*cos(omega*t + phi)
- %syms n
- %signal = double(symsum((sin((1-1/n*n)*omega*t) + sin((1/4-1/n*n)*omega*t)),n,2,10)); 
+ % write your audio signal in Left and Right audio channels in form of mathematical equation here:
+ % use loops here for mathematical functions in terms of ?, ?, etc.
+ Left = Left + amplitude*sin(omega*t + phi);
+ Right = Right + amplitude*sin(omega*t + phi+pi);
  
- %signal=amplitude*tan(omega*t + phi);
- %signal=exp(-t).*sawtooth(omega*-t) ;
- %signal=amplitude*sin(10000*omega.*t + phi) + 0.1*cos(0.1*omega.*t + phi);
+ % normalize your signal here, if it's values are not in -1 to +1 range.
+ Left=Left/max(Left);
+ Right=Right/max(Right);
  
- 
- 
- signal=10*sin(omega*t.*t) + -5*sin(3*omega*t) + sin(5*omega*t.*t.*t) + 30*sin(7*omega*t) + sin(9*omega./t);
- 
- 
- 
- 
- 
- 
+ % Finally form your 2-channel Stereo Audio signal ready to be played
+ signal(1,:)=Left;
+ signal(2,:)=Right;
  %% plot the signal
  
- subplot(2,1,1);
- %  Time-Domain
+ %  Time-Domain Analysis
+ subplot(2,2,[1:2]);
  plot(t, signal);
  xlabel('Time (seconds) --->');
  ylabel('amplitude --->');
- title('Sound Signal in Time-Domain');
+ title('Sound Signal in Time-Domain ( blue:L | red:R )');
  
- subplot(2,1,2);
- %  Frequency-Domain
- fSignal=fft(signal);                   % taking fourier transform
- fSignal=fftshift(fSignal);             % rearranges by shifting to the center
- ff=(fs/2*linspace(-1,1,duration*fs));  % calculate frequency axis defined by fs
- fSignal=abs(fSignal);                  % taking only the magnitude of the complex signal
- plot(ff, fSignal);              
- xlabel('Frequency (Hz) --->');
- ylabel('magnitude --->');
- title('Sound Signal in Frequency-Domain');
+ %  Time-Frequency Analysis
+ nwin = 128;
+ wind = hamming(nwin);
+ nlap = nwin-20;
+ nfft = 256;
+
+ subplot(2,2,3);
+ spectrogram(signal(1,:),wind,nlap,nfft,fs,'yaxis');
+ title('Left-Channel Spectrum (L)');
+ subplot(2,2,4);
+ spectrogram(signal(2,:),wind,nlap,nfft,fs,'yaxis');
+ title('Rignt-Channel Spectrum (R)');
+
  %% play the signal
   sound(signal, fs);
  %% save signal as stereo wave file
- %  stereo_signal = [x1; x1]';
- %  audiowrite(stereo_signal, fs, 'test.wav');
+ 
+ % Suppoeted Export Formats by MATLAB:
+ % WAVE (.wav), OGG (.ogg), FLAC (.flac), MPEG-4 AAC (.m4a, .mp4).
+ 
+ %  Sample rate 'fs', in hertz, of audio data y, specified as a positive scalar 
+ %  greater than 0. Values of Fs are truncated to integer boundaries. 
+ %  When writing to .m4a or .mp4 files on Windows platforms, 
+ %  audiowrite supports only samples rates of 44100 and 48000.
+ 
+ stereo_signal=signal.';
+ audiowrite('sample sound.wav',stereo_signal,fs)
